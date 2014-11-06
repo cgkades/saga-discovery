@@ -1,0 +1,50 @@
+GREEN='\[\033[01;32m\]'
+YELLOW='\[\033[01;33m\]'
+BLUE='\[\033[01;34m\]'
+RED='\[\033[01;31m\]'
+CLEAR='\[\033[00m\]'
+WHITE='\[\033[01;37m\]'
+
+export GREEN_E='\033[01;32m'
+export YELLOW_E='\033[01;33m'
+BLUE_E='\033[01;34m'
+export RED_E='\033[01;31m'
+export CLEAR_E='\033[00m'
+WHITE_E='\033[01;37m'
+
+interfaces() {
+/sbin/ip a| awk /'^[0-9]*\:/ {print $2}' | sed 's/\:// '| sort | egrep -v "@|lo"
+}
+
+linkethtool(){
+for item in `interfaces`;do
+        mac=`ifconfig $item | grep ether | awk '{print $2}'`
+        driver=`ethtool -i $item | grep driver | cut -d ' ' -f 2`
+        speed=`sudo ethtool $item 2>/dev/null | egrep "Speed"`
+        linkstat=`sudo ethtool $item 2> /dev/null| egrep "Link det"| awk '{print $3}'`
+        if [ $linkstat == "yes" ]; then
+                color=$GREEN_E
+        elif [ $linkstat == "no" ];then
+                color=$RED_E
+        else
+                color=$YELLOW_E
+        fi
+        printf "${item}\tLink: ${color}${linkstat}${CLEAR_E} $speed\tMAC:${mac}\n"
+done
+echo "---------------------------------------------"
+}
+interface_info() {
+        mac=`ifconfig $1 | grep ether | awk '{print $2}'`
+        link_speed=`ethtool $1 2>/dev/null | egrep "Speed" | awk '{print $2}'`
+        link_detected=`ethtool $1 2> /dev/null| egrep "Link det"| awk '{print $3}'`
+        driver=`ethtool -i $1 | grep driver | cut -d ' ' -f 2`
+        echo "$1 $mac $link_speed $link_detected $driver"
+
+}
+
+dispaly_interface_info() {
+	for item in `interfaces`;do
+		interface_info $item
+	done
+}
+
