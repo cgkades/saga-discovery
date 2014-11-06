@@ -1,0 +1,8 @@
+*.iso
+*.pyc
+tftpboot
+*passwd*
+*.swp
+*.~lock.*
+dir_structure
+Notes
