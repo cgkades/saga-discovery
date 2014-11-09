@@ -7,101 +7,14 @@ import argparse
 import os
 import socket, struct
 os.environ["PATH"] += os.pathsep + "/sbin" + os.pathsep + "/usr/sbin"
-
+from repobuilder import RepoBuilder
 try:
 	import json
 except ImportError:
 	import simplejson as json
 
 
-	#[serverid]
-    #name=Some longer name and description for this repository
-    #baseurl=url://path/to/repository-copy-1/
-    #enable=(0 | 1)
-    #gpgcheck=(0  | 1)
-
-class RepoBuilder():
-	#currenlty built for RHEL based systems
-	def __init__(self):
-		self.repos = {} # Dictionary {'repofilename': [{'header': '[header],'name': 'long name', 'URL': 'url://location','enabled':0|1, 'gpgcheck': 0|1}]}
-		self.load_repos()
-
-	def load_repos(self):
-		#files should be in the name.repo format
-		file_list = os.listdir('/etc/yum.repos.d/') #returns an array
-		for repo_file in file_list:
-			f = open("/etc/yum.repos.d/%s" %(repo_file))
-			lines = f.read().split('\n')
-			f.close()
-
-			tmp_array_of_dictionary = self._lines_to_repo_dictionary(lines)
-			if tmp_array_of_dictionary:
-				self.repos[repo_file] = tmp_array_of_dictionary
-
-	def _lines_to_repo_dictionary(self, lines):
-		if len(lines) < 5:
-			print "Error parsing repo file %s" % (repo_file,)
-			return None
-
-		if '[' not in lines[0] and ']' not in lines[0]:
-			print "Repo file not formatted corectly"
-			return None
-
-		tmpd = {}
-		item = 0
-		for line in lines:
-			if len(line) > 0 and '[' in line[0]:
-				item = item + 1
-				tmpd[item] = {}
-				tmpd[item]['header'] = line
-			elif len(line) > 0 and '#' not in line[0]:
-				spl_line = line.split('=')
-				if len(spl_line) > 1:
-					tmpd[item][spl_line[0]] = spl_line[1]
-		return_array = []
-		for key in tmpd:
-			return_array.append(tmpd[key])
-		return return_array
-
-	def install_repo(self, repo_array):
-		#check to make sure we don't already have the repo
-		repos_to_add = []
-		for item in repo_array:
-			if not self._is_in_repo(item['name']):
-				repos_to_add.append(item)
-
-		if repos_to_add == []:
-			return
-		for repo in repos_to_add:
-			self._create_repo_file(repo)
-		self.load_repos()
-
-	def _is_in_repo(self, repo_string):
-		if self.repos == {}:
-			return False
-		repository = "[" + repo_string + "]"
-		for key in self.repos:
-			for repo in self.repos[key]:
-				if repository in repo['header']:
-					return True
-
-		return False
-
-	def _create_repo_file(self, repo_dictionary):
-		name = repo_dictionary['name']
-		url = repo_dictionary['url']
-		location = repo_dictionary['location']
-
-		f = open("/etc/yum.repos.d/%s.repo" % (name,),'w')
-		f.write("[%s]\n" % (name,))
-		f.write("name=Repo in %s\n" % (location,))
-		f.write("url=%s\n" % (url,))
-		f.write("enabled=1\n")
-		f.write("gpgcheck=0\n")
-		f.close()
-
-
-class SBN_Node():
+class SagaNode():
 	def __init__(self):
 		self.location = 'Temp Location'
 		self.headers = {'content-type': 'application/json'}
@@ -181,7 +94,7 @@ class SBN_Node():
 			data['location'] = self.location
 			data['serialnumber'] = self.facts['serialnumber']
 			data['facts'] = self.facts;
-		try:	
+		try:
  			r = requests.post("%s/nodes/%s/discover" % (self.discovery_server, self.facts['serialnumber']), data=json.dumps(data), headers=self.headers,verify=False)
  		except:
  			print "Unable to reach server.."
@@ -204,7 +117,7 @@ class SBN_Node():
 				action['status'] = status
 				action['stdout'] = stdout
 				action['stderr'] = stderr
-		
+
 			self._send_actions_response(response['actions'])
 
 		if 'repositories' in response and response['repositories'] != []:
@@ -213,7 +126,7 @@ class SBN_Node():
 	def _send_actions_response(self, actions_dictionary):
 		if not self.facts:
 			self._get_facts()
-		
+
 		return_data = {'actions': actions_dictionary, 'facts': self.facts,'location': self.location	}
 		self.post_data(return_data)
 
@@ -232,7 +145,7 @@ class SBN_Node():
 		response = os.system("/sbin/dhclient -r;/sbin/dhclient")
 		if response != 0:
 			print "Network restart failed. DHCP Lease failed."
-		
+
 
 	def _get_default_route(self):
 		"""Read the default gateway directly from /proc."""
@@ -245,11 +158,11 @@ class SBN_Node():
 					return socket.inet_ntoa(struct.pack("=L", int(fields[2], 16)))
 
 			return "1.2.3.4"
-		
+
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
-	node = SBN_Node()
+	node = SagaNode()
 	print "Running initalization, this may take a while..."
 	node.initalize()
 	discovery_server = node.discovery_server
@@ -262,7 +175,7 @@ if __name__ == "__main__":
 		print "No discovery server found in boot arguments or program arguments."
 		sys.exit(1)
 	node.discovery_server = discovery_server
-	
+
 	if not node.is_dhcp_lease_valid():
 		node.renew_dhcp_lease()
 	node.post_data()
