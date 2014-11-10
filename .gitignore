@@ -6,3 +6,4 @@ tftpboot
 *.~lock.*
 dir_structure
 Notes
+.project
