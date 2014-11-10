@@ -6,3 +6,5 @@ tftpboot
 *.~lock.*
 dir_structure
 Notes
+.pydevproject
+.project
