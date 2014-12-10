@@ -13,4 +13,3 @@ If you are using the .iso image:
  * There is no real need to quit unless you want to. The agent runs via cron every 5 minutes.
  * The default user is liveuser and has sudo privleges.
 
-
